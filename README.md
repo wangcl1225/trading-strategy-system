@@ -201,3 +201,23 @@ trading-strategy-system/
 - 回测/模拟含费用与滑点近似，仍无法覆盖涨跌停、停牌、冲击成本。
 - 历史或模拟跑赢不代表未来。
 - 禁止将本系统输出直接作为实盘下单依据。
+
+
+## v0.6 能力
+
+### 全市场增量行情
+- SQLite 日K库 data/market_bars.db，code+date 唯一
+- 增量同步：已存在历史只补缺口/最近尾巴
+- 命令：python scripts/sync_market.py --market all --max-codes 80
+- 接口：POST /api/market/sync · GET /api/market/status
+
+### 聚宽 JoinQuant 官方 API
+- 适配层 pp/data/joinquant.py（jqdatasdk）
+- 配置 joinquant.enabled/username/password/token（见 config.local）
+- 未配置时自动降级本地聚宽风格策略
+- 接口：GET /api/joinquant/status · POST /api/joinquant/test
+
+### 回测图表导出
+- HTML 自包含报告（净值 SVG + 月度热力图 + 盈亏分布）
+- Markdown / JSON
+- 页面按钮或 POST /api/backtest/export

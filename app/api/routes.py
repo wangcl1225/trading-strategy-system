@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, Query
@@ -252,6 +253,95 @@ def backtest_v2(
             benchmark_id=benchmark,
             run_sensitivity=sensitivity,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/backtest/export")
+def backtest_export(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    """导出回测报告：body { result: {...}, format: html|md|json, filename? }"""
+    try:
+        from app.analytics.report_export import export_backtest_report
+
+        result = payload.get("result") or {}
+        if not result:
+            raise HTTPException(status_code=400, detail="缺少 result 回测结果")
+        fmt = str(payload.get("format") or "html")
+        filename = payload.get("filename")
+        return export_backtest_report(result, fmt=fmt, filename=filename)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/backtest/export/file")
+def backtest_export_file(path: str = Query(...)):
+    """下载导出文件（限制在 reports/export 下）。"""
+    from fastapi.responses import FileResponse
+
+    base = (ROOT / "reports" / "export").resolve()
+    target = Path(path).resolve()
+    if not str(target).startswith(str(base)) or not target.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    return FileResponse(str(target), filename=target.name)
+
+
+@router.get("/market/status")
+def market_status() -> dict[str, Any]:
+    try:
+        from app.data.market_store import list_synced_codes, market_db_path
+
+        items = list_synced_codes()
+        return {
+            "db_path": str(market_db_path()),
+            "codes": len(items),
+            "sample": items[:20],
+            "config": load_config().get("market_db"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/market/sync")
+def market_sync(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    """全市场/增量行情同步。body: { market, days, max_codes, codes[] }"""
+    try:
+        from app.data.market_store import MarketBarStore
+
+        market = str(payload.get("market") or "all")
+        days = int(payload.get("days") or 250)
+        max_codes = payload.get("max_codes")
+        codes = payload.get("codes")
+        store = MarketBarStore()
+        return store.sync_universe(
+            market=market,
+            days=days,
+            max_codes=int(max_codes) if max_codes else None,
+            codes=codes,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/joinquant/status")
+def jq_status() -> dict[str, Any]:
+    try:
+        from app.data.joinquant import JoinQuantClient
+
+        return JoinQuantClient().status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/joinquant/test")
+def jq_test() -> dict[str, Any]:
+    try:
+        from app.data.joinquant import JoinQuantClient
+
+        client = JoinQuantClient()
+        ok = client.login()
+        return {"login": ok, "status": client.status(), "local_fallback": client.local_strategies_fallback()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

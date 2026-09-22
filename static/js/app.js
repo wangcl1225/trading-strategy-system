@@ -462,6 +462,28 @@ function drawPnlBars(dist) {
   });
 }
 
+
+async function exportBacktest(format) {
+  if (!state.lastBt) { showToast("warn","无回测结果","请先运行专业回测再导出"); return; }
+  try {
+    const data = await postApi("/api/backtest/export", { result: state.lastBt, format });
+    showToast("ok","导出成功", data.path);
+    const a = document.createElement("a");
+    a.href = "/api/backtest/export/file?path=" + encodeURIComponent(data.path);
+    a.download = data.download_name || "";
+    a.click();
+  } catch (e) { showToast("err","导出失败", e.message); }
+}
+async function syncMarket() {
+  const btn = $("btn-sync-market"); if (btn) { btn.disabled = true; btn.textContent = "同步中…"; }
+  try {
+    readFilters();
+    const data = await postApi("/api/market/sync", { market: state.market || "all", days: 250, max_codes: 50 });
+    showToast("ok","行情同步完成", "全量 " + data.full_synced + " · 增量 " + data.incremental_synced + " · 库 " + data.db_bars);
+  } catch (e) { showToast("err","同步失败", e.message); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "同步全市场行情"; } }
+}
+
 async function runBacktest() {
   readFilters();
   const btn = $("btn-backtest");
@@ -970,6 +992,9 @@ function bind() {
   $("btn-apply-strategy").addEventListener("click", applyStrategy);
   $("btn-rebalance").addEventListener("click", runRebalance);
   $("btn-backtest").addEventListener("click", runBacktest);
+  $("btn-export-html")?.addEventListener("click", () => exportBacktest("html"));
+  $("btn-export-md")?.addEventListener("click", () => exportBacktest("md"));
+  $("btn-sync-market")?.addEventListener("click", syncMarket);
   $("btn-paper-run").addEventListener("click", runPaper);
   $("btn-paper-refresh").addEventListener("click", loadPaper);
   $("btn-morning")?.addEventListener("click", () => runWatchSlot("morning"));

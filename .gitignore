@@ -15,7 +15,7 @@ config.local.yaml
 # 运行时数据与缓存
 cache/
 reports/
-data/
+/data/
 *.db
 *.sqlite
 *.log

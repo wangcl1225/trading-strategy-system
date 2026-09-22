@@ -12,6 +12,17 @@ market:
   default: all
   crypto_exchange: binance
 
+market_db:
+  path: data/market_bars.db
+  sync_days: 250
+  refresh_tail_days: 5
+
+joinquant:
+  enabled: false
+  username: ""
+  password: ""
+  token: ""
+
 benchmark:
   default: hs300
   # 混合市场时的基准权重

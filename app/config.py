@@ -8,7 +8,6 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config.yaml"
 CONFIG_LOCAL_PATH = ROOT / "config.local.yaml"
-CONFIG_LOCAL_PATH = ROOT / "config.local.yaml"
 
 _DEFAULTS: dict[str, Any] = {
     "app": {
@@ -17,7 +16,9 @@ _DEFAULTS: dict[str, Any] = {
         "cache_dir": "cache",
         "reports_dir": "reports",
     },
-    "market": {"default": "a_share", "crypto_exchange": "okx"},
+    "market": {"default": "all", "crypto_exchange": "binance"},
+    "market_db": {"path": "data/market_bars.db", "sync_days": 250, "refresh_tail_days": 5},
+    "joinquant": {"enabled": False, "username": "", "password": "", "token": ""},
     "universe": {
         "a_share": {
             "source": "index",

@@ -1,3 +1,11 @@
+## [0.6.0] - 2026-09-22
+### Added
+- 全市场增量行情库（SQLite upsert / 增量尾巴刷新）
+- JoinQuant 官方 API 适配层（可选 jqdatasdk）
+- 回测报告导出 HTML/Markdown/JSON
+- UI：导出报告、同步全市场行情
+
+
 # Changelog
 
 ## [0.5.0] - 2026-09-22
