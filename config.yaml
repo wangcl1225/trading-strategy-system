@@ -1,0 +1,154 @@
+# 交易策略系统配置
+# 不构成投资建议
+
+app:
+  host: 127.0.0.1
+  port: 8787
+  cache_dir: cache
+  reports_dir: reports
+  db_path: data/tradelab.db
+
+market:
+  default: all
+  crypto_exchange: binance
+
+benchmark:
+  default: hs300
+  # 混合市场时的基准权重
+  blend_weights:
+    hs300: 0.7
+    btc: 0.3
+  # 合格线说明见页面；内置：超额≥5pp 且 最大回撤 < 基准
+
+costs:
+  a_share:
+    commission_rate: 0.00015    # 万1.5
+    stamp_tax_sell: 0.0005      # 印花税卖出 0.05%
+    slippage_pct: 0.001         # 滑点 0.1%
+    min_commission: 5.0
+  crypto:
+    commission_rate: 0.001
+    stamp_tax_sell: 0.0
+    slippage_pct: 0.001
+    min_commission: 0.0
+
+risk:
+  # 结构内置锁定；数值可调
+  max_single_position_pct: 30
+  max_total_position_pct: 100
+  min_total_position_pct: 0
+  single_stop_loss_pct: 30
+  portfolio_drawdown_de_risk_pct: 25
+  de_risk_max_total_pct: 30
+  underperform_months_reeval: 3
+
+universe:
+  a_share:
+    source: index
+    exclude_st: true
+    max_count: 300
+    list_pages: 8
+  crypto:
+    exchange: binance
+    symbols:
+      - BTC-USDT
+      - ETH-USDT
+      - SOL-USDT
+      - BNB-USDT
+      - XRP-USDT
+      - ADA-USDT
+      - DOGE-USDT
+      - AVAX-USDT
+      - LINK-USDT
+      - DOT-USDT
+      - LTC-USDT
+      - TRX-USDT
+      - NEAR-USDT
+      - ARB-USDT
+      - OP-USDT
+      - APT-USDT
+      - SUI-USDT
+
+signals:
+  min_score: 55
+  market: all
+  top_n: 20
+  # 每日飞书关注推送：早 / 中 / 晚 三个时段
+  push_slots:
+    morning: "09:20"
+    midday: "12:30"
+    evening: "17:30"
+  daily_push_time: "17:27"
+  watch_strategies:            # 关注表覆盖的策略（全部都要提醒）
+    - short_term_hot
+    - long_term_layout
+    - bottom_fishing
+    - jq_dual_momentum
+    - jq_small_mom_rotation
+    - jq_low_vol_quality
+    - jq_turtle_breakout
+    - jq_reversal_oversold
+    - jq_grid_mean_rev
+  feishu_enabled: true
+  feishu_webhook: ""            # 私密项写在 config.local.yaml（勿提交仓库）
+  feishu_secret: ""
+  push_enabled: true
+  push_webhook: ""
+
+# 多渠道通知（企业微信/钉钉/Telegram/邮件/通用Webhook）
+# 密钥/Webhook 一律放 config.local.yaml
+notify:
+  enabled_channels:
+    - feishu
+  feishu:
+    webhook: ""
+  wecom:
+    webhook: ""
+  dingtalk:
+    webhook: ""
+  telegram:
+    bot_token: ""
+    chat_id: ""
+    api_base: "https://api.telegram.org"
+    parse_mode: "Markdown"
+  email:
+    smtp_host: ""
+    smtp_port: 465
+    ssl: true
+    username: ""
+    password: ""
+    to: []
+  webhook:
+    url: ""
+    method: POST
+    headers:
+      Content-Type: application/json
+    body_template:
+      title: "{title}"
+      text: "{text}"
+
+paper_trade:
+  enabled: true
+  market: all
+  strategy_ids:
+    - short_term_hot
+    - long_term_layout
+    - bottom_fishing
+  initial_cash: 1000000
+  shares_per_trade: 500
+  crypto_notional_per_trade: 5000
+  top_n_per_strategy: 5
+  buy_time: "14:45"
+  morning_remind_time: "09:20"
+  holding_days:
+    short_term_hot: 3
+    long_term_layout: 42
+    bottom_fishing: 60
+    jq_dual_momentum: 5
+    jq_small_mom_rotation: 5
+    jq_low_vol_quality: 20
+    jq_turtle_breakout: 10
+    jq_reversal_oversold: 5
+    jq_grid_mean_rev: 5
+  data_dir: data/paper_trade
+  database: data/tradelab.db

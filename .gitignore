@@ -1,0 +1,33 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# 本机私密配置（Webhook / 密钥 / 邮箱授权码）
+config.local.yaml
+*.secret
+.env
+.env.*
+
+# 运行时数据与缓存
+cache/
+reports/
+data/
+*.db
+*.sqlite
+*.log
+server.log
+server.err.log
+
+# 系统 / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# 临时脚本输出
+tmp/

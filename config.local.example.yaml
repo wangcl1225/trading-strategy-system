@@ -1,0 +1,36 @@
+signals:
+  feishu_enabled: true
+  feishu_webhook: ""   # 飞书群机器人 Webhook
+  feishu_secret: ""
+  push_enabled: true
+  push_webhook: ""
+
+notify:
+  enabled_channels:
+    - feishu
+  feishu:
+    webhook: ""
+  wecom:
+    webhook: ""        # 企业微信
+  dingtalk:
+    webhook: ""        # 钉钉
+  telegram:
+    bot_token: ""
+    chat_id: ""
+    api_base: "https://api.telegram.org"
+    parse_mode: "Markdown"
+  email:
+    smtp_host: ""
+    smtp_port: 465
+    ssl: true
+    username: ""
+    password: ""
+    to: []
+  webhook:
+    url: ""
+    method: POST
+    headers:
+      Content-Type: application/json
+    body_template:
+      title: "{title}"
+      text: "{text}"

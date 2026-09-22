@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeLab · 策略/风控/回测控制台</title>
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <style>
+    .chart-box { background:#0d1524; border:1px solid var(--line); border-radius:10px; padding:8px; margin-top:10px; }
+    .chart-box canvas { width:100%; height:220px; display:block; }
+    .heat { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-top:8px; }
+    .heat div { padding:8px 4px; text-align:center; font-size:11px; border-radius:6px; color:#041018; font-family:var(--mono); }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-right:6px; }
+    .badge.ok { background:rgba(52,211,153,.18); color:var(--ok); }
+    .badge.bad { background:rgba(248,113,113,.15); color:var(--danger); }
+    .badge.warn { background:rgba(245,165,36,.15); color:var(--accent-2); }
+    .badge.jq { background:rgba(99,102,241,.2); color:#a5b4fc; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:900px){ .grid2{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">Trade<span>Lab</span></div>
+      <div class="brand-sub">策略 · 风控 · 回测 · 模拟</div>
+      <button class="nav-btn active" data-view="strategies">策略中心</button>
+      <button class="nav-btn" data-view="risk">风控与调仓</button>
+      <button class="nav-btn" data-view="backtest">回测报告</button>
+      <button class="nav-btn" data-view="watch">关注/持仓</button>
+      <button class="nav-btn" data-view="paper">模拟账户</button>
+      <button class="nav-btn" data-view="bench">基准说明</button>
+      <button class="nav-btn" data-view="signals">信号/推送</button>
+      <button class="nav-btn" data-view="method">规则说明</button>
+    </aside>
+    <main class="main">
+      <div class="notice">
+        执行规则：<b>T日收盘选股，T+1开盘成交</b>；成本含<b>佣金万1.5 + 印花税 + 滑点</b>。
+        风控内置锁定。合格标准：<b>收益显著跑赢基准（≥5pp）且回撤小于基准</b>。不构成投资建议。
+      </div>
+
+      <div class="topbar">
+        <div class="field">
+          <label for="market-select">市场</label>
+          <select id="market-select">
+            <option value="a_share">A股</option>
+            <option value="crypto">加密（Binance）</option>
+            <option value="all">全部</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="bench-select">基准</label>
+          <select id="bench-select"></select>
+        </div>
+        <div class="field">
+          <label for="date-from">日期从</label>
+          <input id="date-from" type="date" />
+        </div>
+        <div class="field">
+          <label for="date-to">日期至</label>
+          <input id="date-to" type="date" />
+        </div>
+      </div>
+      <div id="scan-status" class="muted" style="margin-bottom:16px">加载中…</div>
+
+      <section id="view-strategies">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>策略中心（可切换）</h2>
+            <div class="desc">内置策略 + 聚宽 JoinQuant 策略广场热门策略（本地实现）</div>
+          </div>
+          <div id="strategy-list"></div>
+          <div class="topbar" style="margin-top:12px">
+            <div class="field">
+              <label for="strategy-select">当前策略</label>
+              <select id="strategy-select" style="min-width:220px"></select>
+            </div>
+            <div class="field">
+              <label for="topn-input">持仓数量 TopN</label>
+              <input id="topn-input" type="number" value="5" min="3" max="20" />
+            </div>
+            <button class="btn" id="btn-scan-strategy">按当前策略选股</button>
+            <button class="btn secondary" id="btn-apply-strategy">应用到模拟盘组合</button>
+          </div>
+          <div id="apply-result"></div>
+          <div id="strategy-result" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section id="view-risk" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>风控规则（内置锁定）</h2>
+            <div class="desc">事前写死，不能事后关闭</div>
+          </div>
+          <div id="risk-rules"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>调仓计算</h2>
+            <div class="desc">输入目标池 → 输出买卖数量（已叠加风控）</div>
+          </div>
+          <div class="topbar">
+            <button class="btn" id="btn-rebalance">用当前策略结果计算调仓</button>
+          </div>
+          <div id="risk-state" class="metrics" style="margin-top:10px"></div>
+          <div id="rebalance-orders" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <section id="view-backtest" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>回测报告（含成本/T+1/风控）</h2>
+            <div class="desc">净值曲线 · 回撤 · 夏普 · 月度热力 · 盈亏分布 · 参数敏感性 · 对比基准</div>
+          </div>
+          <div class="topbar">
+            <button class="btn" id="btn-backtest">运行专业回测</button>
+            <span class="muted" id="bt-meta"></span>
+          </div>
+          <div id="bt-result"><div class="muted">选择策略后运行。回测会自动做参数敏感性检测。</div></div>
+        </div>
+      </section>
+
+      <section id="view-watch" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>关注列表与持仓（与飞书同步）</h2>
+            <div class="desc">A股在前 · 未持仓在前 · 关注表为「信号价后涨幅」 · 持仓明细为「买入后涨幅」</div>
+          </div>
+          <div class="topbar">
+            <div class="field">
+              <label for="watch-slot">时段</label>
+              <select id="watch-slot">
+                <option value="morning">早盘</option>
+                <option value="midday">午盘</option>
+                <option value="evening">收盘</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="watch-date">历史日期</label>
+              <select id="watch-date" style="min-width:160px">
+                <option value="">实时（今日计算）</option>
+              </select>
+            </div>
+            <button class="btn" id="btn-watch-load">刷新页面数据</button>
+            <button class="btn secondary" id="btn-watch-push">推送飞书</button>
+          </div>
+          <div id="watch-meta" class="muted" style="margin:8px 0"></div>
+          <div class="muted" style="margin-bottom:8px">
+            查历史关注：左侧菜单「关注/持仓」→「历史日期」下拉选日期（数据库快照）；
+            也可在顶部全局日期筛选后点刷新。连续上榜标的的「信号价后涨幅」按<b>首次信号价</b>计算。
+          </div>
+          <div id="watch-body"></div>
+        </div>
+      </section>
+
+      <section id="view-paper" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>模拟账户（策略隔离）</h2>
+            <div class="desc">每个策略独立账户：资金 / 持仓 / 成交互不影响</div>
+          </div>
+          <div class="topbar">
+            <div class="field">
+              <label for="account-select">策略账户</label>
+              <select id="account-select" style="min-width:240px"></select>
+            </div>
+            <button class="btn" id="btn-paper-run">执行该账户模拟（T+1）</button>
+            <button class="btn secondary" id="btn-run-all">全部策略账户执行</button>
+            <button class="btn secondary" id="btn-watch-am">早盘关注</button>
+            <button class="btn secondary" id="btn-watch-noon">午盘关注</button>
+            <button class="btn secondary" id="btn-watch-pm">收盘关注</button>
+            <button class="btn secondary" id="btn-paper-refresh">刷新账户</button>
+          </div>
+          <div id="account-banner" style="margin:8px 0"></div>
+          <div id="accounts-overview" style="margin-top:8px"></div>
+          <div id="paper-summary" class="metrics" style="margin-top:12px"></div>
+          <div id="paper-positions" style="margin-top:12px"></div>
+          <div id="paper-trades" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <section id="view-bench" class="hidden">
+        <div class="panel">
+          <div class="panel-head"><h2>对比基准怎么定 · 为什么</h2><div class="desc">没有基准的收益没有意义</div></div>
+          <div id="bench-info"></div>
+          <div class="notice" style="margin-top:12px">
+            <b>合格判定（内置）：</b>策略累计收益 ≥ 基准收益 + 5 个百分点，<b>并且</b> 策略最大回撤 &lt; 基准最大回撤。
+            只赢收益但回撤更大 → 不合格；只控回撤但跑输 → 不合格。
+          </div>
+        </div>
+      </section>
+
+      <section id="view-signals" class="hidden">
+        <div class="panel">
+          <div class="panel-head"><h2>信号与通知推送</h2><div class="desc" id="feishu-status">…</div></div>
+          <div class="topbar">
+            <button class="btn" id="btn-signals">生成信号入库</button>
+            <button class="btn secondary" id="btn-push">生成并推送</button>
+          </div>
+          <div id="signals-result"></div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-head"><h2>多渠道通知（微信/钉钉/邮件等）</h2><div class="desc">在 config.yaml → notify 填入各渠道配置后测试</div></div>
+          <div id="notify-channels"></div>
+          <div class="topbar" style="margin-top:10px">
+            <div class="field">
+              <label for="notify-channel">测试渠道</label>
+              <select id="notify-channel">
+                <option value="feishu">飞书</option>
+                <option value="wecom">企业微信</option>
+                <option value="dingtalk">钉钉</option>
+                <option value="telegram">Telegram</option>
+                <option value="email">邮件</option>
+                <option value="webhook">通用 Webhook</option>
+              </select>
+            </div>
+            <button class="btn secondary" id="btn-notify-test">发送测试消息</button>
+          </div>
+          <div class="muted" style="margin-top:8px">
+            个人微信：官方无稳定群机器人，推荐<strong>企业微信机器人</strong>（可手机微信接收企微消息），或钉钉/邮件。
+            多渠道可同时启用：notify.enabled_channels 数组。
+          </div>
+        </div>
+      </section>
+
+      <section id="view-method" class="hidden">
+        <div class="panel">
+          <div class="panel-head"><h2>系统规则说明</h2></div>
+          <div id="method-body"></div>
+        </div>
+      </section>
+
+      <div id="toast" class="toast"></div>
+      <div class="footer-note">
+        数据库 <code>data/tradelab.db</code> · 策略账户隔离 · 风控内置 · 成本与T+1已计入
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
