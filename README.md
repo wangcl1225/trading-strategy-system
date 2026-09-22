@@ -56,7 +56,7 @@ Copy-Item config.local.example.yaml config.local.yaml
 .\.venv\Scripts\python.exe run_daily.py --market all --push
 ```
 
-### Windows 计划任务（推荐，不依赖 MiMo 是否打开）
+### Windows 计划任务（推荐）
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File register_tasks.ps1
